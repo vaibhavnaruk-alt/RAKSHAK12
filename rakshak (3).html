@@ -1,0 +1,1286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Rakshak – Turning Citizens into City Sensors</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Exo+2:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root {
+  --red: #FF2D3B;
+  --red-dark: #C41A25;
+  --blue: #0A84FF;
+  --blue-dark: #0065CC;
+  --yellow: #FFD60A;
+  --green: #30D158;
+  --orange: #FF9F0A;
+  --bg: #0A0C10;
+  --bg2: #111318;
+  --bg3: #1A1D26;
+  --bg4: #222635;
+  --border: rgba(255,255,255,0.07);
+  --text: #F0F2F5;
+  --text2: #8A9BB5;
+  --text3: #556075;
+  --glow-red: 0 0 20px rgba(255,45,59,0.4);
+  --glow-blue: 0 0 20px rgba(10,132,255,0.4);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Exo 2',sans-serif;overflow:hidden;}
+#app{display:flex;flex-direction:column;height:100%;max-width:430px;margin:0 auto;position:relative;background:var(--bg);overflow:hidden;}
+
+/* SCROLLABLE CONTENT */
+.page{display:none;flex:1;overflow-y:auto;overflow-x:hidden;padding-bottom:80px;}
+.page.active{display:flex;flex-direction:column;}
+.page::-webkit-scrollbar{width:3px;}
+.page::-webkit-scrollbar-track{background:transparent;}
+.page::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+
+/* SPLASH / AUTH */
+#splash{position:absolute;inset:0;background:var(--bg);z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;}
+.splash-bg{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 30%,rgba(255,45,59,0.15) 0%,transparent 65%),radial-gradient(ellipse at 80% 80%,rgba(10,132,255,0.1) 0%,transparent 50%);pointer-events:none;}
+.splash-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;}
+.splash-logo{position:relative;z-index:1;text-align:center;animation:fadeUp 0.8s ease;}
+.splash-icon{width:80px;height:80px;background:linear-gradient(135deg,var(--red),#FF6B35);border-radius:22px;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px;box-shadow:var(--glow-red),0 8px 32px rgba(0,0,0,0.5);transform:rotate(-5deg);}
+.splash-title{font-family:'Rajdhani',sans-serif;font-size:48px;font-weight:700;letter-spacing:4px;background:linear-gradient(135deg,#fff 30%,var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.splash-tag{font-size:13px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;margin-top:6px;font-weight:500;}
+
+/* AUTH CARD */
+.auth-card{position:relative;z-index:1;background:var(--bg3);border:1px solid var(--border);border-radius:24px;padding:28px 24px;margin:30px 20px 0;animation:fadeUp 1s ease 0.2s both;}
+.auth-tabs{display:flex;background:var(--bg2);border-radius:12px;padding:4px;margin-bottom:24px;}
+.auth-tab{flex:1;padding:10px;text-align:center;border-radius:9px;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.2s;color:var(--text2);}
+.auth-tab.active{background:var(--red);color:#fff;box-shadow:var(--glow-red);}
+.input-group{margin-bottom:16px;}
+.input-group label{display:block;font-size:12px;font-weight:600;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;}
+.inp{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:15px;outline:none;transition:border-color 0.2s;}
+.inp:focus{border-color:var(--blue);}
+.inp::placeholder{color:var(--text3);}
+.btn-primary{width:100%;background:linear-gradient(135deg,var(--red),#FF6B35);border:none;border-radius:14px;padding:15px;color:#fff;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;cursor:pointer;letter-spacing:1px;box-shadow:var(--glow-red);transition:transform 0.15s,box-shadow 0.15s;}
+.btn-primary:active{transform:scale(0.97);}
+.btn-google{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:14px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:15px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;transition:border-color 0.2s;}
+.btn-google:hover{border-color:var(--blue);}
+.divider{display:flex;align-items:center;gap:12px;margin:16px 0;color:var(--text3);font-size:13px;}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+.forgot{text-align:center;font-size:13px;color:var(--blue);cursor:pointer;margin-top:12px;}
+
+/* TOP BAR */
+.topbar{padding:16px 20px 12px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:linear-gradient(180deg,var(--bg) 70%,transparent);}
+.topbar-logo{font-family:'Rajdhani',sans-serif;font-size:26px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#fff,var(--red));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.icon-btn{width:38px;height:38px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;transition:border-color 0.2s;}
+.icon-btn:hover{border-color:var(--blue);}
+.notif-dot{position:relative;}
+.notif-dot::after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;background:var(--red);border-radius:50%;border:2px solid var(--bg);}
+
+/* HOME PAGE */
+.hero-banner{margin:0 16px 20px;background:linear-gradient(135deg,var(--red-dark),var(--red),#FF6B35);border-radius:20px;padding:22px 20px;position:relative;overflow:hidden;}
+.hero-banner::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,0.08);border-radius:50%;}
+.hero-banner::after{content:'';position:absolute;bottom:-30px;right:40px;width:60px;height:60px;background:rgba(255,255,255,0.05);border-radius:50%;}
+.hero-title{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.hero-sub{font-size:13px;color:rgba(255,255,255,0.75);letter-spacing:0.5px;}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,0,0,0.25);border-radius:20px;padding:5px 12px;font-size:12px;font-weight:600;margin-top:12px;letter-spacing:0.5px;}
+.pulse-dot{width:8px;height:8px;background:#fff;border-radius:50%;animation:pulse 1.5s infinite;}
+
+/* QUICK ACTIONS */
+.section-title{padding:0 20px 14px;font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:700;letter-spacing:1px;color:var(--text2);text-transform:uppercase;}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:0 16px 20px;}
+.quick-card{background:var(--bg3);border:1px solid var(--border);border-radius:18px;padding:18px 16px;cursor:pointer;transition:all 0.2s;position:relative;overflow:hidden;}
+.quick-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity 0.2s;border-radius:18px;}
+.quick-card:active{transform:scale(0.96);}
+.quick-card.sos{border-color:rgba(255,45,59,0.4);background:linear-gradient(135deg,rgba(255,45,59,0.15),rgba(255,45,59,0.05));}
+.quick-card.sos::before{background:radial-gradient(circle at 50% 50%,rgba(255,45,59,0.2),transparent);}
+.quick-card.sos:hover::before{opacity:1;}
+.quick-card.blue{border-color:rgba(10,132,255,0.3);}
+.quick-card.blue:hover{border-color:rgba(10,132,255,0.6);}
+.quick-card.yellow{border-color:rgba(255,214,10,0.3);}
+.quick-card.green{border-color:rgba(48,209,88,0.3);}
+.qc-icon{font-size:28px;margin-bottom:10px;display:block;}
+.qc-title{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:0.5px;margin-bottom:4px;}
+.qc-sub{font-size:11px;color:var(--text2);}
+
+/* STATS BAR */
+.stats-bar{display:flex;gap:0;margin:0 16px 20px;background:var(--bg3);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+.stat-item{flex:1;padding:14px 8px;text-align:center;border-right:1px solid var(--border);}
+.stat-item:last-child{border-right:none;}
+.stat-num{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;}
+.stat-num.red{color:var(--red);}
+.stat-num.blue{color:var(--blue);}
+.stat-num.green{color:var(--green);}
+.stat-label{font-size:10px;color:var(--text3);letter-spacing:0.5px;text-transform:uppercase;margin-top:2px;}
+
+/* RECENT INCIDENTS */
+.incident-list{padding:0 16px;display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+.incident-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;}
+.inc-icon{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.inc-icon.red{background:rgba(255,45,59,0.15);}
+.inc-icon.yellow{background:rgba(255,214,10,0.15);}
+.inc-icon.orange{background:rgba(255,159,10,0.15);}
+.inc-title{font-weight:700;font-size:14px;margin-bottom:3px;}
+.inc-meta{font-size:12px;color:var(--text2);}
+.inc-badge{margin-left:auto;padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;flex-shrink:0;}
+.inc-badge.red{background:rgba(255,45,59,0.2);color:var(--red);}
+.inc-badge.yellow{background:rgba(255,214,10,0.2);color:var(--yellow);}
+.inc-badge.green{background:rgba(48,209,88,0.2);color:var(--green);}
+
+/* BOTTOM NAV */
+.bottom-nav{position:absolute;bottom:0;left:0;right:0;background:rgba(10,12,16,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;align-items:center;padding:0 8px 6px;z-index:50;padding-bottom:calc(6px + env(safe-area-inset-bottom));}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0 4px;cursor:pointer;transition:color 0.2s;color:var(--text3);font-size:10px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;gap:4px;}
+.nav-item .nav-icon{font-size:22px;transition:transform 0.2s;}
+.nav-item.active{color:var(--blue);}
+.nav-item.active .nav-icon{transform:scale(1.1);}
+.nav-sos{flex:none;width:60px;height:60px;background:linear-gradient(135deg,var(--red),#FF6B35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;cursor:pointer;box-shadow:var(--glow-red),0 4px 20px rgba(0,0,0,0.4);margin-top:-20px;border:3px solid var(--bg);transition:transform 0.15s;}
+.nav-sos:active{transform:scale(0.93);}
+
+/* PAGE HEADERS */
+.page-header{padding:20px 20px 16px;display:flex;align-items:center;gap:14px;flex-shrink:0;}
+.back-btn{width:40px;height:40px;background:var(--bg3);border:1px solid var(--border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;flex-shrink:0;}
+.page-title{font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;letter-spacing:1px;}
+.page-sub{font-size:13px;color:var(--text2);margin-top:2px;}
+
+/* REPORT FORM */
+.form-section{padding:0 16px;margin-bottom:20px;}
+.form-label{font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;display:block;}
+.type-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+.type-chip{background:var(--bg3);border:2px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.type-chip.selected{border-color:var(--blue);background:rgba(10,132,255,0.1);}
+.type-chip-icon{font-size:24px;margin-bottom:6px;}
+.type-chip-label{font-size:13px;font-weight:600;}
+.upload-zone{border:2px dashed var(--border);border-radius:16px;padding:30px;text-align:center;cursor:pointer;transition:border-color 0.2s;background:var(--bg3);}
+.upload-zone:hover{border-color:var(--blue);}
+.upload-icon{font-size:36px;margin-bottom:10px;}
+.upload-text{font-size:14px;color:var(--text2);}
+.textarea{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:14px;outline:none;resize:none;min-height:100px;transition:border-color 0.2s;}
+.textarea:focus{border-color:var(--blue);}
+.loc-chip{display:inline-flex;align-items:center;gap:8px;background:rgba(10,132,255,0.15);border:1px solid rgba(10,132,255,0.3);border-radius:20px;padding:8px 14px;font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;margin-bottom:20px;}
+
+/* SOS PAGE */
+.sos-ring{width:180px;height:180px;border-radius:50%;background:linear-gradient(135deg,var(--red),#FF6B35);display:flex;align-items:center;justify-content:center;margin:0 auto 30px;cursor:pointer;position:relative;box-shadow:var(--glow-red),0 8px 40px rgba(255,45,59,0.4);transition:transform 0.15s;}
+.sos-ring::before{content:'';position:absolute;inset:-10px;border-radius:50%;border:2px solid rgba(255,45,59,0.3);animation:sosPulse 2s infinite;}
+.sos-ring::after{content:'';position:absolute;inset:-20px;border-radius:50%;border:1px solid rgba(255,45,59,0.15);animation:sosPulse 2s infinite 0.5s;}
+.sos-ring:active{transform:scale(0.94);}
+.sos-text{font-family:'Rajdhani',sans-serif;font-size:42px;font-weight:700;letter-spacing:4px;text-align:center;}
+.sos-sub{font-size:14px;color:rgba(255,255,255,0.7);text-align:center;}
+.sos-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;padding:0 16px;margin-bottom:20px;}
+.sos-info{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;}
+.sos-info-icon{font-size:22px;margin-bottom:6px;}
+.sos-info-label{font-size:11px;color:var(--text2);font-weight:600;}
+.emergency-contacts{padding:0 16px;}
+.contact-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:14px;margin-bottom:10px;}
+.contact-avatar{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.contact-name{font-weight:700;font-size:14px;}
+.contact-num{font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace;}
+.call-btn{margin-left:auto;width:36px;height:36px;background:rgba(48,209,88,0.2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;}
+
+/* MAP PAGE */
+#map{flex:1;min-height:300px;}
+.map-overlay{position:absolute;top:80px;left:16px;right:16px;z-index:400;display:flex;gap:8px;}
+.map-filter{background:rgba(10,12,16,0.9);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:border-color 0.2s;}
+.map-filter.active{border-color:var(--blue);color:var(--blue);}
+.map-legend{position:absolute;bottom:100px;left:16px;background:rgba(10,12,16,0.9);backdrop-filter:blur(10px);border:1px solid var(--border);border-radius:14px;padding:14px;z-index:400;}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px;}
+.legend-item:last-child{margin-bottom:0;}
+.legend-dot{width:10px;height:10px;border-radius:50%;}
+
+/* AI ASSISTANT */
+.chat-container{display:flex;flex-direction:column;height:100%;}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;}
+.chat-messages::-webkit-scrollbar{width:3px;}
+.chat-messages::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px;}
+.msg{max-width:80%;padding:12px 16px;border-radius:16px;font-size:14px;line-height:1.5;}
+.msg.ai{background:var(--bg3);border:1px solid var(--border);border-radius:16px 16px 16px 4px;color:var(--text);}
+.msg.user{background:var(--blue);border-radius:16px 16px 4px 16px;color:#fff;align-self:flex-end;}
+.msg.ai .ai-name{font-size:11px;font-weight:700;color:var(--blue);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;}
+.chat-input-row{padding:12px 16px;background:var(--bg);border-top:1px solid var(--border);display:flex;gap:10px;align-items:center;flex-shrink:0;}
+.chat-inp{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:12px 16px;color:var(--text);font-family:'Exo 2',sans-serif;font-size:14px;outline:none;}
+.chat-inp:focus{border-color:var(--blue);}
+.chat-send{width:42px;height:42px;background:var(--blue);border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;flex-shrink:0;}
+.typing{display:flex;align-items:center;gap:6px;padding:12px 16px;}
+.typing span{width:8px;height:8px;background:var(--text3);border-radius:50%;animation:typing 1.2s infinite;}
+.typing span:nth-child(2){animation-delay:0.2s;}
+.typing span:nth-child(3){animation-delay:0.4s;}
+.quick-prompts{display:flex;gap:8px;padding:8px 16px;overflow-x:auto;flex-shrink:0;}
+.quick-prompts::-webkit-scrollbar{display:none;}
+.qprompt{white-space:nowrap;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;transition:border-color 0.2s;flex-shrink:0;}
+.qprompt:hover{border-color:var(--blue);}
+
+/* EMERGENCY ANALYZER */
+.analyzer-steps{padding:0 16px;}
+.step-indicator{display:flex;align-items:center;gap:0;margin-bottom:28px;}
+.step-dot{width:32px;height:32px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;transition:all 0.3s;}
+.step-dot.done{background:var(--green);border-color:var(--green);color:#fff;}
+.step-dot.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:var(--glow-blue);}
+.step-line{flex:1;height:2px;background:var(--border);}
+.step-line.done{background:var(--green);}
+.vehicle-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;}
+.vehicle-card{background:var(--bg3);border:2px solid var(--border);border-radius:16px;padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.vehicle-card:active{transform:scale(0.95);}
+.vehicle-card.selected{border-color:var(--blue);background:rgba(10,132,255,0.12);}
+.vehicle-icon{font-size:30px;margin-bottom:8px;}
+.vehicle-label{font-size:12px;font-weight:700;letter-spacing:0.5px;}
+
+/* RISK RESULT */
+.risk-card{margin:0 16px 20px;border-radius:20px;padding:24px;text-align:center;position:relative;overflow:hidden;}
+.risk-card.low{background:linear-gradient(135deg,rgba(48,209,88,0.2),rgba(48,209,88,0.05));border:2px solid rgba(48,209,88,0.4);}
+.risk-card.moderate{background:linear-gradient(135deg,rgba(255,214,10,0.2),rgba(255,214,10,0.05));border:2px solid rgba(255,214,10,0.4);}
+.risk-card.high{background:linear-gradient(135deg,rgba(255,159,10,0.2),rgba(255,159,10,0.05));border:2px solid rgba(255,159,10,0.4);}
+.risk-card.extreme{background:linear-gradient(135deg,rgba(255,45,59,0.2),rgba(255,45,59,0.05));border:2px solid rgba(255,45,59,0.4);}
+.risk-emoji{font-size:48px;margin-bottom:12px;}
+.risk-level{font-family:'Rajdhani',sans-serif;font-size:32px;font-weight:700;letter-spacing:2px;}
+.risk-score{font-size:64px;font-weight:800;font-family:'Rajdhani',sans-serif;line-height:1;}
+.suggestions{padding:0 16px;display:flex;flex-direction:column;gap:10px;}
+.suggestion-item{background:var(--bg3);border:1px solid var(--border);border-left:4px solid var(--orange);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.5;}
+.suggestion-item.safe{border-left-color:var(--green);}
+.suggestion-item.warn{border-left-color:var(--red);}
+
+/* PROFILE */
+.profile-header{padding:30px 20px;display:flex;flex-direction:column;align-items:center;gap:12px;}
+.avatar{width:80px;height:80px;background:linear-gradient(135deg,var(--red),#FF6B35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;box-shadow:var(--glow-red);}
+.profile-name{font-family:'Rajdhani',sans-serif;font-size:24px;font-weight:700;letter-spacing:1px;}
+.profile-badge{background:rgba(10,132,255,0.2);border:1px solid rgba(10,132,255,0.4);border-radius:20px;padding:6px 16px;font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px;}
+.points-card{margin:0 16px 20px;background:linear-gradient(135deg,rgba(255,214,10,0.15),rgba(255,159,10,0.1));border:1px solid rgba(255,214,10,0.3);border-radius:18px;padding:20px;display:flex;align-items:center;gap:16px;}
+.points-icon{font-size:36px;}
+.points-val{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;color:var(--yellow);}
+.points-label{font-size:13px;color:var(--text2);}
+.badges-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 16px;margin-bottom:20px;}
+.badge-card{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px 10px;text-align:center;}
+.badge-card.earned{border-color:rgba(255,214,10,0.4);background:rgba(255,214,10,0.05);}
+.badge-icon{font-size:28px;margin-bottom:8px;}
+.badge-name{font-size:11px;font-weight:700;letter-spacing:0.5px;}
+.settings-list{padding:0 16px;display:flex;flex-direction:column;gap:8px;}
+.setting-item{background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;align-items:center;gap:14px;cursor:pointer;}
+.setting-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;}
+.setting-label{font-weight:600;font-size:15px;flex:1;}
+.setting-arrow{color:var(--text3);font-size:18px;}
+.toggle{width:44px;height:26px;background:var(--bg2);border-radius:13px;position:relative;cursor:pointer;transition:background 0.3s;flex-shrink:0;}
+.toggle.on{background:var(--green);}
+.toggle::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform 0.3s;box-shadow:0 2px 6px rgba(0,0,0,0.3);}
+.toggle.on::after{transform:translateX(18px);}
+
+/* SOS ACTIVE */
+.sos-active-overlay{position:absolute;inset:0;background:rgba(255,45,59,0.95);z-index:200;display:none;flex-direction:column;align-items:center;justify-content:center;gap:20px;animation:sosFlash 0.5s ease;}
+.sos-active-overlay.show{display:flex;}
+.sos-active-icon{font-size:80px;animation:bounce 0.6s infinite;}
+.sos-active-title{font-family:'Rajdhani',sans-serif;font-size:36px;font-weight:700;letter-spacing:4px;text-align:center;}
+.sos-active-sub{font-size:16px;color:rgba(255,255,255,0.8);text-align:center;max-width:280px;line-height:1.6;}
+.sos-cancel{background:rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.4);border-radius:50px;padding:14px 40px;font-family:'Exo 2',sans-serif;font-size:16px;font-weight:700;color:#fff;cursor:pointer;letter-spacing:1px;margin-top:10px;}
+
+/* TOAST */
+.toast{position:absolute;bottom:100px;left:20px;right:20px;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:14px 16px;display:flex;align-items:center;gap:12px;z-index:300;transform:translateY(20px);opacity:0;transition:all 0.3s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast-icon{font-size:20px;}
+.toast-text{font-size:14px;font-weight:600;}
+
+/* ANIMATIONS */
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(0.8);}}
+@keyframes sosPulse{0%{transform:scale(1);opacity:0.8;}100%{transform:scale(1.4);opacity:0;}}
+@keyframes typing{0%,60%,100%{transform:translateY(0);}30%{transform:translateY(-8px);}}
+@keyframes sosFlash{0%{opacity:0;}100%{opacity:1;}}
+@keyframes bounce{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.8s linear infinite;}
+
+/* MAP container fix */
+#map-page{position:relative;}
+#leaflet-map{height:calc(100vh - 160px);width:100%;}
+
+/* MODAL */
+.modal-overlay{position:absolute;inset:0;background:rgba(0,0,0,0.7);z-index:150;display:none;align-items:flex-end;}
+.modal-overlay.show{display:flex;}
+.modal-sheet{background:var(--bg2);border-radius:24px 24px 0 0;padding:24px;width:100%;max-height:70vh;overflow-y:auto;}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 20px;}
+.modal-title{font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;margin-bottom:16px;}
+
+/* Scrollable filter bar */
+.filter-scroll{display:flex;gap:8px;padding:0 16px 16px;overflow-x:auto;}
+.filter-scroll::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SPLASH / AUTH -->
+  <div id="splash">
+    <div class="splash-bg"></div>
+    <div class="splash-grid"></div>
+    <div class="splash-logo">
+      <div class="splash-icon">🛡️</div>
+      <div class="splash-title">RAKSHAK</div>
+      <div class="splash-tag">Turning Citizens into City Sensors</div>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="switchAuth('login')">Login</div>
+        <div class="auth-tab" onclick="switchAuth('signup')">Sign Up</div>
+      </div>
+      <div id="login-form">
+        <div class="input-group">
+          <label>Email Address</label>
+          <input class="inp" type="email" placeholder="citizen@rakshak.in" id="auth-email">
+        </div>
+        <div class="input-group">
+          <label>Password</label>
+          <input class="inp" type="password" placeholder="••••••••" id="auth-pass">
+        </div>
+        <button class="btn-primary" onclick="doLogin()">🛡️ &nbsp;Enter Rakshak</button>
+        <div class="divider">or</div>
+        <button class="btn-google" onclick="doLogin()">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Continue with Google
+        </button>
+        <div class="forgot" onclick="showToast('📧 Password reset link sent!')">Forgot Password?</div>
+      </div>
+      <div id="signup-form" style="display:none">
+        <div class="input-group">
+          <label>Full Name</label>
+          <input class="inp" type="text" placeholder="Arjun Kumar">
+        </div>
+        <div class="input-group">
+          <label>Email Address</label>
+          <input class="inp" type="email" placeholder="citizen@rakshak.in">
+        </div>
+        <div class="input-group">
+          <label>Mobile Number</label>
+          <input class="inp" type="tel" placeholder="+91 98765 43210">
+        </div>
+        <div class="input-group">
+          <label>Create Password</label>
+          <input class="inp" type="password" placeholder="••••••••">
+        </div>
+        <button class="btn-primary" onclick="doLogin()">🛡️ &nbsp;Create Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ HOME PAGE ============ -->
+  <div class="page active" id="home-page">
+    <div class="topbar">
+      <div class="topbar-logo">RAKSHAK</div>
+      <div class="topbar-right">
+        <div class="icon-btn notif-dot">🔔</div>
+        <div class="icon-btn" onclick="showPage('profile-page')">👤</div>
+      </div>
+    </div>
+    <div class="hero-banner">
+      <div class="hero-title">🛡️ Stay Safe, Bengaluru</div>
+      <div class="hero-sub">Turning Citizens into City Sensors</div>
+      <div class="hero-badge"><div class="pulse-dot"></div>Live Safety Feed Active</div>
+    </div>
+    <div class="stats-bar">
+      <div class="stat-item">
+        <div class="stat-num red" id="stat-incidents">247</div>
+        <div class="stat-label">Incidents</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num blue" id="stat-reports">1.2K</div>
+        <div class="stat-label">Reports</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num green" id="stat-resolved">89%</div>
+        <div class="stat-label">Resolved</div>
+      </div>
+    </div>
+    <div class="section-title">Quick Actions</div>
+    <div class="quick-grid">
+      <div class="quick-card sos" onclick="showPage('sos-page')">
+        <span class="qc-icon">🚨</span>
+        <div class="qc-title">SOS Emergency</div>
+        <div class="qc-sub">One-tap alert</div>
+      </div>
+      <div class="quick-card blue" onclick="showPage('report-page')">
+        <span class="qc-icon">📸</span>
+        <div class="qc-title">Report Violation</div>
+        <div class="qc-sub">Traffic incidents</div>
+      </div>
+      <div class="quick-card yellow" onclick="showPage('civic-page')">
+        <span class="qc-icon">🏙️</span>
+        <div class="qc-title">Civic Issue</div>
+        <div class="qc-sub">Potholes & more</div>
+      </div>
+      <div class="quick-card green" onclick="showPage('map-page')">
+        <span class="qc-icon">🗺️</span>
+        <div class="qc-title">Live Safety Map</div>
+        <div class="qc-sub">Real-time zones</div>
+      </div>
+      <div class="quick-card blue" onclick="showPage('ai-page')">
+        <span class="qc-icon">🤖</span>
+        <div class="qc-title">AI Assistant</div>
+        <div class="qc-sub">Safety chatbot</div>
+      </div>
+      <div class="quick-card yellow" onclick="showPage('analyzer-page')">
+        <span class="qc-icon">⚡</span>
+        <div class="qc-title">Emergency Analyzer</div>
+        <div class="qc-sub">Travel risk check</div>
+      </div>
+    </div>
+    <div class="section-title">Recent Incidents</div>
+    <div class="incident-list">
+      <div class="incident-card">
+        <div class="inc-icon red">🚗</div>
+        <div><div class="inc-title">Signal Jumping – MG Road</div><div class="inc-meta">12 mins ago · Verified</div></div>
+        <div class="inc-badge red">HIGH</div>
+      </div>
+      <div class="incident-card">
+        <div class="inc-icon yellow">🕳️</div>
+        <div><div class="inc-title">Large Pothole – Outer Ring Rd</div><div class="inc-meta">34 mins ago · Pending</div></div>
+        <div class="inc-badge yellow">MED</div>
+      </div>
+      <div class="incident-card">
+        <div class="inc-icon orange">🔦</div>
+        <div><div class="inc-title">Broken Street Light – HSR</div><div class="inc-meta">1 hr ago · Resolved</div></div>
+        <div class="inc-badge green">DONE</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ REPORT PAGE ============ -->
+  <div class="page" id="report-page">
+    <div class="page-header">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">📸 Report Violation</div>
+        <div class="page-sub">Traffic violation reporting</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <span class="form-label">Violation Type</span>
+      <div class="type-grid">
+        <div class="type-chip" onclick="selectType(this,'violation')">
+          <div class="type-chip-icon">🚦</div>
+          <div class="type-chip-label">Signal Jump</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'violation')">
+          <div class="type-chip-icon">🅿️</div>
+          <div class="type-chip-label">Illegal Parking</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'violation')">
+          <div class="type-chip-icon">💨</div>
+          <div class="type-chip-label">Rash Driving</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'violation')">
+          <div class="type-chip-icon">😡</div>
+          <div class="type-chip-label">Road Rage</div>
+        </div>
+      </div>
+      <span class="form-label">Upload Evidence</span>
+      <div class="upload-zone" onclick="fakeUpload('report')">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text" id="report-upload-text">Tap to upload photo / video</div>
+      </div>
+      <input type="file" id="report-file" style="display:none" accept="image/*,video/*" onchange="handleFileUpload('report')">
+    </div>
+    <div class="form-section">
+      <span class="form-label">Voice Report</span>
+      <div class="upload-zone" id="voice-btn" onclick="toggleVoice()">
+        <div class="upload-icon">🎙️</div>
+        <div class="upload-text" id="voice-text">Tap to record voice description</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <span class="form-label">Description</span>
+      <textarea class="textarea" id="report-desc" placeholder="Describe the violation..."></textarea>
+    </div>
+    <div class="form-section">
+      <div class="loc-chip" onclick="getLocation('report')">📍 <span id="report-loc">Tap to attach location</span></div>
+      <button class="btn-primary" onclick="submitReport('traffic')">Submit Report →</button>
+    </div>
+  </div>
+
+  <!-- ============ CIVIC PAGE ============ -->
+  <div class="page" id="civic-page">
+    <div class="page-header">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">🏙️ Civic Issue</div>
+        <div class="page-sub">Report city infrastructure problems</div>
+      </div>
+    </div>
+    <div class="form-section">
+      <span class="form-label">Issue Type</span>
+      <div class="type-grid">
+        <div class="type-chip" onclick="selectType(this,'civic')">
+          <div class="type-chip-icon">🕳️</div>
+          <div class="type-chip-label">Pothole</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'civic')">
+          <div class="type-chip-icon">🗑️</div>
+          <div class="type-chip-label">Garbage Dumping</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'civic')">
+          <div class="type-chip-icon">💡</div>
+          <div class="type-chip-label">Broken Light</div>
+        </div>
+        <div class="type-chip" onclick="selectType(this,'civic')">
+          <div class="type-chip-icon">🛣️</div>
+          <div class="type-chip-label">Damaged Road</div>
+        </div>
+      </div>
+      <span class="form-label">Image Evidence</span>
+      <div class="upload-zone" onclick="fakeUpload('civic')">
+        <div class="upload-icon">📷</div>
+        <div class="upload-text" id="civic-upload-text">Tap to upload image</div>
+      </div>
+      <input type="file" id="civic-file" style="display:none" accept="image/*" onchange="handleFileUpload('civic')">
+    </div>
+    <div class="form-section">
+      <span class="form-label">Description</span>
+      <textarea class="textarea" placeholder="Describe the civic issue..."></textarea>
+    </div>
+    <div class="form-section">
+      <div class="loc-chip" onclick="getLocation('civic')">📍 <span id="civic-loc">Tap to attach location</span></div>
+      <button class="btn-primary" onclick="submitReport('civic')">Submit Civic Report →</button>
+    </div>
+  </div>
+
+  <!-- ============ SOS PAGE ============ -->
+  <div class="page" id="sos-page">
+    <div class="page-header">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">🚨 SOS Emergency</div>
+        <div class="page-sub">Instant emergency alert system</div>
+      </div>
+    </div>
+    <div style="padding:20px 16px 0;text-align:center;">
+      <div class="sos-ring" onclick="triggerSOS()">
+        <div>
+          <div class="sos-text">SOS</div>
+          <div class="sos-sub">Hold 3 secs</div>
+        </div>
+      </div>
+      <p style="color:var(--text2);font-size:13px;margin-bottom:24px;">Press & hold to activate · Shake phone 3x</p>
+    </div>
+    <div class="sos-info-grid">
+      <div class="sos-info">
+        <div class="sos-info-icon">📍</div>
+        <div class="sos-info-label">GPS Location</div>
+      </div>
+      <div class="sos-info">
+        <div class="sos-info-icon">📷</div>
+        <div class="sos-info-label">Camera Snap</div>
+      </div>
+      <div class="sos-info">
+        <div class="sos-info-icon">🎙️</div>
+        <div class="sos-info-label">10s Audio</div>
+      </div>
+    </div>
+    <div class="section-title">Emergency Contacts</div>
+    <div class="emergency-contacts">
+      <div class="contact-card">
+        <div class="contact-avatar" style="background:rgba(255,45,59,0.2);">🚔</div>
+        <div><div class="contact-name">Police Station</div><div class="contact-num">100 · Nearest</div></div>
+        <div class="call-btn">📞</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-avatar" style="background:rgba(10,132,255,0.2);">🚑</div>
+        <div><div class="contact-name">Ambulance</div><div class="contact-num">108 · Emergency</div></div>
+        <div class="call-btn">📞</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-avatar" style="background:rgba(255,214,10,0.2);">👩</div>
+        <div><div class="contact-name">Women's Helpline</div><div class="contact-num">1091 · 24x7</div></div>
+        <div class="call-btn">📞</div>
+      </div>
+      <div class="contact-card">
+        <div class="contact-avatar" style="background:rgba(48,209,88,0.2);">🔥</div>
+        <div><div class="contact-name">Fire Service</div><div class="contact-num">101 · Emergency</div></div>
+        <div class="call-btn">📞</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MAP PAGE ============ -->
+  <div class="page" id="map-page" style="overflow:hidden;padding-bottom:80px;">
+    <div class="page-header" style="position:absolute;top:0;left:0;right:0;z-index:400;background:rgba(10,12,16,0.95);backdrop-filter:blur(20px);">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">🗺️ Live Safety Map</div>
+        <div class="page-sub">Real-time city safety intelligence</div>
+      </div>
+    </div>
+    <div style="padding-top:80px;display:flex;flex-direction:column;height:100%;">
+      <div class="filter-scroll" style="padding-top:8px;">
+        <div class="map-filter active">All</div>
+        <div class="map-filter">🚗 Accidents</div>
+        <div class="map-filter">⚠️ Unsafe Zones</div>
+        <div class="map-filter">🚔 Police</div>
+        <div class="map-filter">🏥 Hospitals</div>
+        <div class="map-filter">🔴 Heatmap</div>
+      </div>
+      <div id="leaflet-map" style="flex:1;min-height:400px;"></div>
+    </div>
+  </div>
+
+  <!-- ============ AI ASSISTANT PAGE ============ -->
+  <div class="page" id="ai-page" style="overflow:hidden;">
+    <div class="page-header" style="flex-shrink:0;">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">🤖 AI Safety Assistant</div>
+        <div class="page-sub">Powered by Claude · Real-time analysis</div>
+      </div>
+    </div>
+    <div class="chat-container" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+      <div class="chat-messages" id="chat-messages">
+        <div class="msg ai">
+          <div class="ai-name">🛡️ Rakshak AI</div>
+          Namaste! I'm your AI Safety Assistant. I can help you analyze safety risks, report incidents, and provide real-time travel warnings for Bengaluru. How can I help you today?
+        </div>
+        <div class="msg ai">
+          <div class="ai-name">🛡️ Rakshak AI</div>
+          ⚠️ <strong>Live Alert:</strong> MG Road has reported 4 accidents in the last 2 hours. Advise using Residency Road as alternate route.
+        </div>
+      </div>
+      <div class="quick-prompts">
+        <div class="qprompt" onclick="sendQuickPrompt('Is HSR Layout safe right now?')">🔍 HSR Layout safety</div>
+        <div class="qprompt" onclick="sendQuickPrompt('Safe route from Koramangala to Whitefield?')">🗺️ Safe route</div>
+        <div class="qprompt" onclick="sendQuickPrompt('Top 3 accident-prone areas today?')">⚠️ Accident zones</div>
+        <div class="qprompt" onclick="sendQuickPrompt('How to report a traffic violation?')">📋 How to report</div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-inp" id="chat-input" placeholder="Ask about city safety..." onkeydown="if(event.key==='Enter')sendChat()">
+        <button class="chat-send" onclick="sendChat()">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ EMERGENCY ANALYZER PAGE ============ -->
+  <div class="page" id="analyzer-page">
+    <div class="page-header">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div>
+        <div class="page-title">⚡ Emergency Analyzer</div>
+        <div class="page-sub">AI-powered travel risk prediction</div>
+      </div>
+    </div>
+    <div class="analyzer-steps">
+      <div class="step-indicator" id="step-indicator">
+        <div class="step-dot active" id="sdot-1">1</div>
+        <div class="step-line" id="sline-1"></div>
+        <div class="step-dot" id="sdot-2">2</div>
+        <div class="step-line" id="sline-2"></div>
+        <div class="step-dot" id="sdot-3">3</div>
+        <div class="step-line" id="sline-3"></div>
+        <div class="step-dot" id="sdot-4">4</div>
+      </div>
+
+      <!-- Step 1: Vehicle -->
+      <div id="step1">
+        <span class="form-label">Select Your Vehicle</span>
+        <div class="vehicle-grid">
+          <div class="vehicle-card" onclick="selectVehicle(this,'🏍️','Bike')">
+            <div class="vehicle-icon">🏍️</div>
+            <div class="vehicle-label">Bike</div>
+          </div>
+          <div class="vehicle-card" onclick="selectVehicle(this,'🚗','Car')">
+            <div class="vehicle-icon">🚗</div>
+            <div class="vehicle-label">Car</div>
+          </div>
+          <div class="vehicle-card" onclick="selectVehicle(this,'🛺','Auto')">
+            <div class="vehicle-icon">🛺</div>
+            <div class="vehicle-label">Auto</div>
+          </div>
+          <div class="vehicle-card" onclick="selectVehicle(this,'🚌','Bus')">
+            <div class="vehicle-icon">🚌</div>
+            <div class="vehicle-label">Bus</div>
+          </div>
+          <div class="vehicle-card" onclick="selectVehicle(this,'🚛','Truck')">
+            <div class="vehicle-icon">🚛</div>
+            <div class="vehicle-label">Truck</div>
+          </div>
+          <div class="vehicle-card" onclick="selectVehicle(this,'🚲','Bicycle')">
+            <div class="vehicle-icon">🚲</div>
+            <div class="vehicle-label">Bicycle</div>
+          </div>
+        </div>
+        <button class="btn-primary" id="step1-next" style="opacity:0.4;pointer-events:none;" onclick="goStep(2)">Next: Enter Destination →</button>
+      </div>
+
+      <!-- Step 2: Destination -->
+      <div id="step2" style="display:none;">
+        <span class="form-label">Current Location</span>
+        <div class="input-group" style="margin-bottom:16px;">
+          <input class="inp" id="origin-input" placeholder="Koramangala, Bengaluru" value="Koramangala, Bengaluru">
+        </div>
+        <span class="form-label">Destination</span>
+        <div class="input-group" style="margin-bottom:16px;">
+          <input class="inp" id="dest-input" placeholder="e.g. Whitefield, MG Road...">
+        </div>
+        <div class="loc-chip" onclick="getLocation('dest')" style="margin-bottom:20px;">📍 <span id="dest-loc-text">Use map to select destination</span></div>
+        <div id="mini-map" style="height:200px;border-radius:16px;overflow:hidden;margin-bottom:20px;border:1px solid var(--border);"></div>
+        <button class="btn-primary" onclick="goStep(3)">Analyze Risk →</button>
+      </div>
+
+      <!-- Step 3: Analyzing -->
+      <div id="step3" style="display:none;text-align:center;padding:40px 0;">
+        <div style="font-size:60px;margin-bottom:20px;">⚡</div>
+        <div style="font-family:'Rajdhani',sans-serif;font-size:22px;font-weight:700;margin-bottom:12px;">Analyzing Route Safety</div>
+        <div style="color:var(--text2);font-size:14px;margin-bottom:30px;">AI is scanning accident history, crime reports, road conditions...</div>
+        <div class="spinner" style="width:40px;height:40px;border-width:3px;margin:0 auto;"></div>
+      </div>
+
+      <!-- Step 4: Results -->
+      <div id="step4" style="display:none;">
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ PROFILE PAGE ============ -->
+  <div class="page" id="profile-page">
+    <div class="topbar">
+      <div class="back-btn" onclick="showPage('home-page')">←</div>
+      <div class="topbar-logo">Profile</div>
+      <div class="icon-btn">⚙️</div>
+    </div>
+    <div class="profile-header">
+      <div class="avatar">👤</div>
+      <div class="profile-name">Arjun Kumar</div>
+      <div style="color:var(--text2);font-size:14px;">arjun@rakshak.in · +91 98765 43210</div>
+      <div class="profile-badge">🛡️ SAFETY GUARDIAN</div>
+    </div>
+    <div class="points-card">
+      <div class="points-icon">⭐</div>
+      <div>
+        <div class="points-val">1,840</div>
+        <div class="points-label">Civic Points Earned</div>
+      </div>
+    </div>
+    <div class="section-title">Your Badges</div>
+    <div class="badges-grid">
+      <div class="badge-card earned">
+        <div class="badge-icon">🏅</div>
+        <div class="badge-name">Civic Helper</div>
+      </div>
+      <div class="badge-card earned">
+        <div class="badge-icon">🛡️</div>
+        <div class="badge-name">Safety Guardian</div>
+      </div>
+      <div class="badge-card">
+        <div class="badge-icon">🌆</div>
+        <div class="badge-name">City Protector</div>
+      </div>
+    </div>
+    <div class="section-title">Settings</div>
+    <div class="settings-list">
+      <div class="setting-item">
+        <div class="setting-icon">🔔</div>
+        <div class="setting-label">Push Notifications</div>
+        <div class="toggle on" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="setting-item">
+        <div class="setting-icon">👥</div>
+        <div class="setting-label">Emergency Contacts</div>
+        <div class="setting-arrow">›</div>
+      </div>
+      <div class="setting-item" onclick="showLangModal()">
+        <div class="setting-icon">🌐</div>
+        <div class="setting-label">Language</div>
+        <div style="color:var(--text2);font-size:13px;margin-right:8px;" id="lang-label">English</div>
+        <div class="setting-arrow">›</div>
+      </div>
+      <div class="setting-item">
+        <div class="setting-icon">🔒</div>
+        <div class="setting-label">Privacy Settings</div>
+        <div class="setting-arrow">›</div>
+      </div>
+      <div class="setting-item" onclick="doLogout()">
+        <div class="setting-icon">🚪</div>
+        <div class="setting-label" style="color:var(--red);">Sign Out</div>
+        <div class="setting-arrow">›</div>
+      </div>
+    </div>
+    <div style="height:20px;"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav" id="bottom-nav" style="display:none;">
+    <div class="nav-item active" id="nav-home" onclick="showPage('home-page')">
+      <div class="nav-icon">🏠</div>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" id="nav-report" onclick="showPage('report-page')">
+      <div class="nav-icon">📸</div>
+      <span>Report</span>
+    </div>
+    <div class="nav-sos" onclick="triggerSOS()">🚨</div>
+    <div class="nav-item" id="nav-map" onclick="showPage('map-page')">
+      <div class="nav-icon">🗺️</div>
+      <span>Map</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="showPage('profile-page')">
+      <div class="nav-icon">👤</div>
+      <span>Profile</span>
+    </div>
+  </div>
+
+  <!-- SOS ACTIVE OVERLAY -->
+  <div class="sos-active-overlay" id="sos-overlay">
+    <div class="sos-active-icon">🚨</div>
+    <div class="sos-active-title">SOS ACTIVATED</div>
+    <div class="sos-active-sub">Sending your GPS location, camera snapshot & audio recording to nearby police station and emergency contacts</div>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:10px;">
+      <div class="spinner"></div>
+      <span id="sos-status" style="font-size:14px;font-weight:600;">Contacting authorities...</span>
+    </div>
+    <button class="sos-cancel" onclick="cancelSOS()">Cancel SOS</button>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <div class="toast-icon" id="toast-icon">✅</div>
+    <div class="toast-text" id="toast-text">Report submitted successfully</div>
+  </div>
+
+  <!-- LANGUAGE MODAL -->
+  <div class="modal-overlay" id="lang-modal" onclick="closeLangModal(event)">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Select Language</div>
+      <div class="settings-list">
+        <div class="setting-item" onclick="setLang('English')"><div class="setting-icon">🇬🇧</div><div class="setting-label">English</div></div>
+        <div class="setting-item" onclick="setLang('ಕನ್ನಡ')"><div class="setting-icon">🇮🇳</div><div class="setting-label">ಕನ್ನಡ (Kannada)</div></div>
+        <div class="setting-item" onclick="setLang('हिंदी')"><div class="setting-icon">🇮🇳</div><div class="setting-label">हिंदी (Hindi)</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============ STATE ============
+const OPENAI_KEY = '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';
+const MAPBOX_TOKEN = 'pk.39f955fda652867dd79e738a04fdcc06';
+let currentPage = 'home-page';
+let selectedVehicle = null;
+let map = null, miniMap = null;
+let voiceRecording = false;
+let sosTimer = null;
+let chatHistory = [];
+
+// ============ AUTH ============
+function switchAuth(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('login-form').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('signup-form').style.display = tab === 'signup' ? 'block' : 'none';
+}
+
+function doLogin() {
+  const splash = document.getElementById('splash');
+  splash.style.transition = 'opacity 0.5s';
+  splash.style.opacity = '0';
+  setTimeout(() => {
+    splash.style.display = 'none';
+    document.getElementById('bottom-nav').style.display = 'flex';
+    initLiveStats();
+  }, 500);
+}
+
+function doLogout() {
+  location.reload();
+}
+
+// ============ PAGES ============
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  currentPage = id;
+
+  // Update nav highlights
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const map = { 'home-page':'nav-home', 'report-page':'nav-report', 'map-page':'nav-map', 'profile-page':'nav-profile' };
+  if(map[id]) document.getElementById(map[id]).classList.add('active');
+
+  // Init map
+  if(id === 'map-page' && !mapInitialized) initMap();
+  if(id === 'analyzer-page') resetAnalyzer();
+}
+
+// ============ LIVE STATS ANIMATION ============
+function initLiveStats() {
+  setInterval(() => {
+    const el = document.getElementById('stat-incidents');
+    if(el) el.textContent = 240 + Math.floor(Math.random()*20);
+  }, 5000);
+}
+
+// ============ FORMS ============
+function selectType(el, group) {
+  document.querySelectorAll(`.type-chip`).forEach(c => {
+    if(c.closest(`#${group}-page`) || c.closest('.analyzer-steps')) return;
+    // only deselect same context chips
+  });
+  // deselect siblings in same grid
+  el.closest('.type-grid').querySelectorAll('.type-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function fakeUpload(type) {
+  document.getElementById(type + '-file')?.click() || document.getElementById(type+'-upload-text') && (document.getElementById(type+'-upload-text').textContent = '✅ File selected');
+}
+
+function handleFileUpload(type) {
+  const file = document.getElementById(type+'-file').files[0];
+  if(file) document.getElementById(type+'-upload-text').textContent = '✅ ' + file.name;
+}
+
+function toggleVoice() {
+  voiceRecording = !voiceRecording;
+  document.getElementById('voice-text').textContent = voiceRecording ? '🔴 Recording... Tap to stop' : '✅ Voice recorded (8 secs)';
+  document.getElementById('voice-btn').style.borderColor = voiceRecording ? 'var(--red)' : 'var(--border)';
+}
+
+function getLocation(type) {
+  if(!navigator.geolocation) { showToast('⚠️ Location not available'); return; }
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = pos.coords.latitude.toFixed(4), lng = pos.coords.longitude.toFixed(4);
+    const el = document.getElementById(type+'-loc') || document.getElementById(type+'-loc-text');
+    if(el) el.textContent = `📍 ${lat}, ${lng}`;
+    showToast('📍 Location attached successfully!');
+  }, () => {
+    const el = document.getElementById(type+'-loc') || document.getElementById(type+'-loc-text');
+    if(el) el.textContent = '📍 Koramangala, Bengaluru (12.9279°N, 77.6271°E)';
+    showToast('📍 Location attached (demo)');
+  });
+}
+
+function submitReport(type) {
+  showToast('✅ Report submitted! +50 Civic Points earned');
+  setTimeout(() => showPage('home-page'), 1500);
+}
+
+// ============ SOS ============
+function triggerSOS() {
+  const overlay = document.getElementById('sos-overlay');
+  overlay.classList.add('show');
+  navigator.vibrate && navigator.vibrate([200,100,200,100,200]);
+  const statuses = ['Contacting authorities...', 'Sending GPS location...', 'Capturing camera snapshot...', 'Recording audio...', '✅ Emergency alert sent!'];
+  let i = 0;
+  const interval = setInterval(() => {
+    if(i < statuses.length) document.getElementById('sos-status').textContent = statuses[i++];
+    else clearInterval(interval);
+  }, 1200);
+}
+
+function cancelSOS() {
+  document.getElementById('sos-overlay').classList.remove('show');
+  showToast('🔕 SOS cancelled');
+}
+
+// ============ MAP ============
+let mapInitialized = false;
+function initMap() {
+  mapInitialized = true;
+  setTimeout(() => {
+    const m = L.map('leaflet-map', { zoomControl: false }).setView([12.9716, 77.5946], 13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+    }).addTo(m);
+
+    const incidents = [
+      {lat:12.9716,lng:77.5946,icon:'🚗',color:'#FF2D3B',title:'Signal Jump',level:'High'},
+      {lat:12.9350,lng:77.6245,icon:'🕳️',color:'#FFD60A',title:'Pothole',level:'Moderate'},
+      {lat:12.9850,lng:77.5800,icon:'🚔',color:'#0A84FF',title:'Police Post',level:'Safe'},
+      {lat:12.9550,lng:77.6100,icon:'⚠️',color:'#FF9F0A',title:'Road Rage',level:'High'},
+      {lat:12.9200,lng:77.5700,icon:'🏥',color:'#30D158',title:'Hospital',level:'Safe'},
+      {lat:13.0000,lng:77.6300,icon:'🔴',color:'#FF2D3B',title:'Accident Zone',level:'Extreme'},
+    ];
+
+    incidents.forEach(inc => {
+      const icon = L.divIcon({
+        html: `<div style="background:${inc.color};width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid rgba(255,255,255,0.3);box-shadow:0 4px 12px rgba(0,0,0,0.4);">${inc.icon}</div>`,
+        className:'', iconSize:[36,36]
+      });
+      L.marker([inc.lat,inc.lng],{icon}).addTo(m).bindPopup(`<b>${inc.title}</b><br>Risk: ${inc.level}`);
+    });
+
+    // Heatmap circles
+    const zones = [
+      {lat:12.9716,lng:77.5946,r:500,color:'#FF2D3B'},
+      {lat:13.0000,lng:77.6300,r:400,color:'#FF2D3B'},
+      {lat:12.9350,lng:77.6245,r:600,color:'#FFD60A'},
+      {lat:12.9200,lng:77.5700,r:700,color:'#30D158'},
+    ];
+    zones.forEach(z => {
+      L.circle([z.lat,z.lng],{radius:z.r,color:z.color,fillColor:z.color,fillOpacity:0.15,weight:1}).addTo(m);
+    });
+    map = m;
+  }, 100);
+}
+
+function initMiniMap() {
+  if(miniMap) return;
+  setTimeout(() => {
+    miniMap = L.map('mini-map', { zoomControl: false }).setView([12.9716, 77.5946], 12);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '', maxZoom: 19
+    }).addTo(miniMap);
+    miniMap.on('click', e => {
+      document.getElementById('dest-input').value = `${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+      document.getElementById('dest-loc-text').textContent = `📍 ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+    });
+  }, 100);
+}
+
+// ============ EMERGENCY ANALYZER ============
+function resetAnalyzer() {
+  selectedVehicle = null;
+  goToStepDisplay(1);
+}
+
+function selectVehicle(el, icon, label) {
+  document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedVehicle = { icon, label };
+  const btn = document.getElementById('step1-next');
+  btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+}
+
+function goStep(n) {
+  if(n === 2) {
+    goToStepDisplay(2);
+    initMiniMap();
+  } else if(n === 3) {
+    const dest = document.getElementById('dest-input').value.trim();
+    if(!dest) { showToast('⚠️ Please enter a destination'); return; }
+    goToStepDisplay(3);
+    analyzeRisk(dest);
+  }
+}
+
+function goToStepDisplay(n) {
+  [1,2,3,4].forEach(i => {
+    document.getElementById('step'+i).style.display = i===n ? 'block' : 'none';
+    const dot = document.getElementById('sdot-'+i);
+    if(i < n) { dot.classList.add('done'); dot.classList.remove('active'); dot.textContent='✓'; }
+    else if(i === n) { dot.classList.add('active'); dot.classList.remove('done'); dot.textContent=i; }
+    else { dot.classList.remove('done','active'); dot.textContent=i; }
+    if(i < 4) {
+      const line = document.getElementById('sline-'+i);
+      if(line) { line.classList.toggle('done', i < n); }
+    }
+  });
+}
+
+async function analyzeRisk(destination) {
+  const origin = document.getElementById('origin-input').value || 'Koramangala, Bengaluru';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_KEY}` },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [{
+          role: 'user',
+          content: `You are Rakshak AI, a smart city safety system in Bengaluru, India.
+Analyze the travel route from "${origin}" to "${destination}" for a ${selectedVehicle?.label || 'vehicle'} (${selectedVehicle?.icon || '🚗'}).
+
+Return a JSON object with exactly these fields:
+{
+  "riskLevel": "Low" | "Moderate" | "High" | "Extreme",
+  "riskScore": (number 0-100),
+  "summary": "one sentence summary",
+  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"],
+  "incidents": { "accidents": number, "violations": number, "crimeReports": number },
+  "saferRoute": "brief alternate route suggestion or null"
+}
+
+Consider: traffic patterns, accident-prone intersections in Bengaluru, time of day, vehicle vulnerability. Return ONLY the JSON, no explanation.`
+        }],
+        max_tokens: 400
+      })
+    });
+    const data = await res.json();
+    let result;
+    try {
+      const raw = data.choices[0].message.content.replace(/```json|```/g,'').trim();
+      result = JSON.parse(raw);
+    } catch {
+      result = getDemoResult(destination);
+    }
+    setTimeout(() => showRiskResult(result), 500);
+  } catch(e) {
+    setTimeout(() => showRiskResult(getDemoResult(destination)), 800);
+  }
+}
+
+function getDemoResult(dest) {
+  const levels = ['Low','Moderate','High','Extreme'];
+  const level = levels[Math.floor(Math.random()*4)];
+  const scores = {Low:15,Moderate:45,High:72,Extreme:91};
+  return {
+    riskLevel: level,
+    riskScore: scores[level] + Math.floor(Math.random()*8),
+    summary: `Route to ${dest} shows ${level.toLowerCase()} risk based on current city data.`,
+    suggestions: [
+      `⚠️ ${level === 'Extreme' || level === 'High' ? 'Multiple accident reports' : 'Minor incidents reported'} on this route today.`,
+      `🛣️ ${level === 'Low' ? 'Road conditions are good.' : 'Consider alternate routes via Ring Road.'}`,
+      `🚔 ${level === 'Extreme' ? 'Police advisory: avoid travel if possible.' : 'Follow traffic signals carefully.'}`
+    ],
+    incidents: { accidents: Math.floor(Math.random()*8), violations: Math.floor(Math.random()*15), crimeReports: Math.floor(Math.random()*4) },
+    saferRoute: level === 'Low' ? null : 'Via Outer Ring Road – 15% safer'
+  };
+}
+
+function showRiskResult(result) {
+  goToStepDisplay(4);
+  const colors = { Low:'green', Moderate:'moderate', High:'high', Extreme:'extreme' };
+  const emojis = { Low:'🟢', Moderate:'🟡', High:'🟠', Extreme:'🔴' };
+  const cls = colors[result.riskLevel] || 'moderate';
+
+  let html = `
+    <div class="risk-card ${cls}">
+      <div class="risk-emoji">${emojis[result.riskLevel]}</div>
+      <div class="risk-score">${result.riskScore}</div>
+      <div class="risk-level">${result.riskLevel.toUpperCase()} RISK</div>
+      <div style="font-size:13px;color:var(--text2);margin-top:8px;">${result.summary}</div>
+      <div style="display:flex;gap:16px;justify-content:center;margin-top:16px;">
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:800;">${result.incidents?.accidents||0}</div><div style="font-size:11px;color:var(--text2);">Accidents</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:800;">${result.incidents?.violations||0}</div><div style="font-size:11px;color:var(--text2);">Violations</div></div>
+        <div style="text-align:center;"><div style="font-size:20px;font-weight:800;">${result.incidents?.crimeReports||0}</div><div style="font-size:11px;color:var(--text2);">Crime Reports</div></div>
+      </div>
+    </div>`;
+
+  if(result.saferRoute) {
+    html += `<div style="padding:0 16px;margin-bottom:12px;"><div style="background:rgba(10,132,255,0.1);border:1px solid rgba(10,132,255,0.3);border-radius:14px;padding:14px 16px;font-size:14px;font-weight:600;color:var(--blue);">🗺️ Safer Route: ${result.saferRoute}</div></div>`;
+  }
+
+  html += `<div style="padding:0 16px 8px;font-size:12px;font-weight:700;color:var(--text2);letter-spacing:1px;text-transform:uppercase;">Safety Suggestions</div><div class="suggestions">`;
+  (result.suggestions||[]).forEach((s,i) => {
+    const types = ['warn','','safe'];
+    html += `<div class="suggestion-item ${types[i]||''}">${s}</div>`;
+  });
+  html += `</div><div style="padding:16px;"><button class="btn-primary" onclick="resetAnalyzer()">🔄 Analyze Another Route</button></div>`;
+  document.getElementById('step4').innerHTML = html;
+}
+
+// ============ AI CHAT ============
+async function sendChat() {
+  const inp = document.getElementById('chat-input');
+  const msg = inp.value.trim();
+  if(!msg) return;
+  inp.value = '';
+  appendMsg('user', msg);
+  chatHistory.push({ role:'user', content: msg });
+  showTyping();
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${OPENAI_KEY}`},
+      body: JSON.stringify({
+        model:'gpt-3.5-turbo',
+        messages:[
+          { role:'system', content:'You are Rakshak AI, a smart city safety assistant for Bengaluru, India. You help citizens with safety information, incident reports, travel warnings, and civic issues. Keep responses concise (2-3 sentences), informative, and use relevant emojis. Include specific Bengaluru area names when relevant.' },
+          ...chatHistory
+        ],
+        max_tokens:200
+      })
+    });
+    const data = await res.json();
+    removeTyping();
+    const reply = data.choices?.[0]?.message?.content || getDemoReply(msg);
+    chatHistory.push({role:'assistant',content:reply});
+    appendMsg('ai', reply);
+  } catch {
+    removeTyping();
+    const reply = getDemoReply(msg);
+    chatHistory.push({role:'assistant',content:reply});
+    appendMsg('ai', reply);
+  }
+}
+
+function sendQuickPrompt(txt) {
+  document.getElementById('chat-input').value = txt;
+  sendChat();
+}
+
+function getDemoReply(msg) {
+  const replies = [
+    "⚠️ Based on today's data, there are 3 active incidents in that area. I recommend extra caution and suggest using alternate routes via Outer Ring Road.",
+    "🟡 Moderate risk detected. MG Road has reported 2 signal violations today. Stay alert and follow all traffic rules.",
+    "🟢 Area appears safe currently! No major incidents in the last 2 hours. Have a safe journey!",
+    "🚔 Nearest police station: Koramangala PS (1.2 km). You can reach them at 100 for emergencies.",
+    "📊 Today's safety summary: 12 reports filed, 8 resolved. Whitefield and HSR Layout show high accident rates today."
+  ];
+  return replies[Math.floor(Math.random() * replies.length)];
+}
+
+function appendMsg(role, text) {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  if(role === 'ai') div.innerHTML = `<div class="ai-name">🛡️ Rakshak AI</div>${text}`;
+  else div.textContent = text;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai'; div.id = 'typing-indicator';
+  div.innerHTML = '<div class="ai-name">🛡️ Rakshak AI</div><div class="typing"><span></span><span></span><span></span></div>';
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  document.getElementById('typing-indicator')?.remove();
+}
+
+// ============ TOAST ============
+function showToast(msg, icon='✅') {
+  const t = document.getElementById('toast');
+  document.getElementById('toast-text').textContent = msg;
+  document.getElementById('toast-icon').textContent = icon;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ============ LANGUAGE MODAL ============
+function showLangModal() {
+  document.getElementById('lang-modal').classList.add('show');
+}
+function closeLangModal(e) {
+  if(e.target === document.getElementById('lang-modal')) document.getElementById('lang-modal').classList.remove('show');
+}
+function setLang(l) {
+  document.getElementById('lang-label').textContent = l;
+  document.getElementById('lang-modal').classList.remove('show');
+  showToast('🌐 Language changed to ' + l);
+}
+
+// ============ SHAKE DETECTION ============
+let shakeCount = 0, lastShake = 0;
+if(window.DeviceMotionEvent) {
+  window.addEventListener('devicemotion', e => {
+    const acc = e.accelerationIncludingGravity;
+    if(!acc) return;
+    const total = Math.abs(acc.x)+Math.abs(acc.y)+Math.abs(acc.z);
+    const now = Date.now();
+    if(total > 30 && now - lastShake > 500) {
+      shakeCount++; lastShake = now;
+      if(shakeCount >= 3) { shakeCount = 0; triggerSOS(); }
+    }
+  });
+}
+
+// ============ FILTER CHIPS ============
+document.querySelectorAll('.map-filter').forEach(f => {
+  f.addEventListener('click', () => {
+    document.querySelectorAll('.map-filter').forEach(x => x.classList.remove('active'));
+    f.classList.add('active');
+  });
+});
+
+// Auto-animate stats
+setInterval(() => {
+  if(document.getElementById('stat-incidents')) {
+    document.getElementById('stat-incidents').textContent = 240 + Math.floor(Math.random()*15);
+  }
+}, 8000);
+</script>
+</body>
+</html>
